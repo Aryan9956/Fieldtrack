@@ -1,6 +1,13 @@
 [build]
-  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
+  command = "npx prisma generate && npx prisma db push --accept-data-loss && npm run build"
   publish = ".next"
+
+[build.environment]
+  DATABASE_URL = "postgresql://neondb_owner:npg_UcSHG6F4wBZe@ep-wandering-math-ay1rl027.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require"
+  AUTH_SECRET = "fieldtrack-prod-secret-key-change-in-production-min32chars"
+  PRICE_PER_EMPLOYEE = "19"
+  PAYMENTS_ENABLED = "false"
+  EMAIL_PROVIDER = "dev"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
