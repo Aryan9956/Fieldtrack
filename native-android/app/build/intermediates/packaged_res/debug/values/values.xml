@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bgDark">#090D16</color>
+    <color name="colorAccent">#6366F1</color>
+    <color name="colorPrimary">#4F46E5</color>
+    <color name="colorPrimaryDark">#3730A3</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <string name="app_name">FieldTrack</string>
+    <string name="custom_url_scheme">com.fieldtrack.app</string>
+    <string name="package_name">com.fieldtrack.app</string>
+    <string name="title_activity_main">FieldTrack</string>
+    <style name="Theme.FieldTrackNative" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/bgDark</item>
+    </style>
+</resources>

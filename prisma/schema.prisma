@@ -1,0 +1,304 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── USERS ───────────────────────────────────────────
+model User {
+  id                         String    @id @default(cuid())
+  email                      String    @unique
+  passwordHash               String
+  name                       String
+  role                       String    @default("OWNER") // SUPER_ADMIN | OWNER | EMPLOYEE
+
+  // Email verification (OWNER only)
+  emailVerified              Boolean   @default(false)
+  emailVerifiedAt            DateTime?
+  verificationToken          String?   @unique // stored as hash
+  verificationTokenExpiresAt DateTime?
+
+  // Password reset
+  resetToken                 String?   @unique
+  resetTokenExpiresAt        DateTime?
+
+  // Relations
+  ownedOrganization          Organization? @relation("OrgOwner")
+  employeeProfile            Employee?
+  notifications              Notification[]
+  auditLogsPerformed         AuditLog[]    @relation("AuditPerformer")
+  auditLogsReceived          AuditLog[]    @relation("AuditTarget")
+
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+
+  @@index([role])
+  @@index([emailVerified])
+}
+
+// ─── ORGANIZATIONS ───────────────────────────────────
+model Organization {
+  id                String   @id @default(cuid())
+  name              String
+  ownerId           String   @unique
+  owner             User     @relation("OrgOwner", fields: [ownerId], references: [id])
+
+  // Access control (admin-managed)
+  accessStatus      String   @default("PENDING") // PENDING | ACTIVE | EXPIRED | SUSPENDED | REVOKED
+  accessGrantedAt   DateTime?
+  accessExpiresAt   DateTime?
+  accessRevokedAt   DateTime?
+  accessSuspendedAt DateTime?
+
+  // Employee limit (admin-set)
+  employeeLimit     Int      @default(0)
+
+  // Relations
+  employees         Employee[]
+  tasks             Task[]
+  workSessions      WorkSession[]
+  locations         EmployeeLocation[]
+  subscription      Subscription?
+  payments          Payment[]
+  accessGrants      AccessGrant[]
+  notifications     Notification[]
+  shareTokens       LocationShareToken[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([accessStatus])
+}
+
+// ─── ACCESS GRANTS ───────────────────────────────────
+model AccessGrant {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  action         String   // GRANTED | EXTENDED | REVOKED | SUSPENDED | REACTIVATED
+  duration       String?  // "7d" | "30d" | "90d" | "custom"
+  employeeLimit  Int?
+  reason         String?
+  grantedBy      String   // admin user ID
+  expiresAt      DateTime?
+
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([action])
+}
+
+// ─── EMPLOYEES ───────────────────────────────────────
+model Employee {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  phone          String?
+  designation    String?
+  isActive       Boolean  @default(true)
+
+  // Current status
+  currentStatus  String   @default("OFFLINE") // OFFLINE | WORKING | ON_BREAK
+  lastSeenAt     DateTime?
+
+  // Relations
+  workSessions   WorkSession[]
+  locations      EmployeeLocation[]
+  tasks          Task[]
+  shareTokens    LocationShareToken[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([isActive])
+  @@index([currentStatus])
+  @@index([organizationId, isActive])
+}
+
+// ─── WORK SESSIONS ───────────────────────────────────
+model WorkSession {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  startTime      DateTime @default(now())
+  endTime        DateTime?
+  duration       Int?     // total seconds
+
+  startLat       Float?
+  startLng       Float?
+  endLat         Float?
+  endLng         Float?
+
+  status         String   @default("ACTIVE") // ACTIVE | COMPLETED | ABANDONED
+
+  locations      EmployeeLocation[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([organizationId])
+  @@index([startTime])
+  @@index([status])
+  @@index([organizationId, startTime])
+}
+
+// ─── EMPLOYEE LOCATIONS ──────────────────────────────
+model EmployeeLocation {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  workSessionId  String?
+  workSession    WorkSession? @relation(fields: [workSessionId], references: [id])
+
+  latitude       Float
+  longitude      Float
+  accuracy       Float?
+  timestamp      DateTime @default(now())
+
+  @@index([employeeId, timestamp])
+  @@index([organizationId, timestamp])
+  @@index([workSessionId])
+}
+
+// ─── LOCATION SHARE TOKENS ───────────────────────────
+model LocationShareToken {
+  id             String       @id @default(cuid())
+  shareToken     String       @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  employeeId     String?
+  employee       Employee?    @relation(fields: [employeeId], references: [id])
+  title          String?
+  expiresAt      DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  @@index([shareToken])
+  @@index([organizationId])
+  @@index([employeeId])
+}
+
+// ─── TASKS ───────────────────────────────────────────
+model Task {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  employeeId     String?
+  employee       Employee? @relation(fields: [employeeId], references: [id])
+
+  title          String
+  description    String?
+  priority       String   @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  status         String   @default("ASSIGNED") // ASSIGNED | ACCEPTED | IN_PROGRESS | COMPLETED
+  dueDate        DateTime?
+  location       String?  // address text
+
+  completedAt    DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([organizationId, status])
+}
+
+// ─── SUBSCRIPTION ────────────────────────────────────
+model Subscription {
+  id                    String   @id @default(cuid())
+  organizationId        String   @unique
+  organization          Organization @relation(fields: [organizationId], references: [id])
+
+  plan                  String   @default("FIELDTRACK")
+  pricePerEmployee      Int      @default(19) // INR
+  status                String   @default("MANUAL") // MANUAL | ACTIVE | PAST_DUE | CANCELLED
+
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelledAt           DateTime?
+
+  // Payment gateway (future)
+  gatewaySubscriptionId String?
+  gatewayCustomerId     String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ─── PAYMENTS ────────────────────────────────────────
+model Payment {
+  id               String   @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  amount           Int      // in paisa (₹1 = 100 paisa)
+  currency         String   @default("INR")
+  status           String   @default("PENDING") // PENDING | SUCCESS | FAILED | REFUNDED
+  employeeCount    Int
+  period           String?  // "2024-01" etc.
+
+  gatewayPaymentId String?
+  gatewayOrderId   String?
+
+  createdAt        DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────
+model Notification {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  type           String        // TASK_ASSIGNED | WORK_STARTED | ACCESS_GRANTED | etc.
+  title          String
+  message        String
+  read           Boolean       @default(false)
+  data           String?       // JSON metadata
+
+  createdAt      DateTime      @default(now())
+
+  @@index([userId, read])
+  @@index([organizationId])
+}
+
+// ─── AUDIT LOG ───────────────────────────────────────
+model AuditLog {
+  id          String   @id @default(cuid())
+  performerId String?
+  performer   User?    @relation("AuditPerformer", fields: [performerId], references: [id])
+  targetId    String?
+  target      User?    @relation("AuditTarget", fields: [targetId], references: [id])
+
+  action      String   // OWNER_REGISTERED | EMAIL_VERIFIED | ACCESS_GRANTED | etc.
+  entityType  String?  // USER | ORGANIZATION | EMPLOYEE | TASK
+  entityId    String?
+  metadata    String?  // JSON
+  ipAddress   String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([action])
+  @@index([performerId])
+  @@index([targetId])
+  @@index([createdAt])
+}
