@@ -37,3 +37,11 @@ next-env.d.ts
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
+
+# android build outputs
+/native-android/build/
+/native-android/**/build/
+.gradle/
+*.apk
+*.flat
+
