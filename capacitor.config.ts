@@ -3,15 +3,11 @@ import type { CapacitorConfig } from '@capacitor/cli';
 /**
  * FieldTrack Capacitor Android Configuration
  * 
- * Your current Wi-Fi Local IP: http://10.114.255.57:3000
- * Production SaaS Domain: https://fieldtrack.yourdomain.com
+ * Live Production SaaS Domain: https://fieldtrack.netlify.app
  */
 
-const LOCAL_WIFI_IP = 'http://10.114.255.57:3000';
-const PRODUCTION_URL = 'https://fieldtrack.yourdomain.com';
-
-// Priority: CAPACITOR_SERVER_URL > NEXT_PUBLIC_APP_URL > LOCAL_WIFI_IP
-const SERVER_URL = process.env.CAPACITOR_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL || LOCAL_WIFI_IP;
+const PRODUCTION_URL = 'https://fieldtrack.netlify.app';
+const SERVER_URL = process.env.CAPACITOR_SERVER_URL || process.env.NEXT_PUBLIC_APP_URL || PRODUCTION_URL;
 
 const config: CapacitorConfig = {
   appId: 'com.fieldtrack.app',
