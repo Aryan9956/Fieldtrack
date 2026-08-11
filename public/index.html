@@ -17,6 +17,8 @@
       justify-content: center;
       min-height: 100vh;
       text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
     }
     .logo-badge {
       width: 64px;
@@ -39,8 +41,9 @@
     p {
       color: #94a3b8;
       font-size: 14px;
-      margin: 0 0 24px 0;
-      max-width: 280px;
+      margin: 0 0 20px 0;
+      max-width: 320px;
+      line-height: 1.5;
     }
     .spinner {
       width: 32px;
@@ -49,28 +52,52 @@
       border-top-color: #6366f1;
       border-radius: 50%;
       animation: spin 1s infinite linear;
+      margin-bottom: 24px;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    .btn-retry {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+    }
   </style>
   <script>
-    // Auto-redirect Capacitor fallback WebView to live server or login
+    const LIVE_URL = 'https://fieldtrack.netlify.app/login';
+    const LOCAL_URL = 'http://10.114.255.57:3000/login';
+
+    function redirectToApp() {
+      // Direct to live online Netlify server first
+      window.location.href = LIVE_URL;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
+      // Auto-redirect to live Netlify server after 300ms
+      setTimeout(redirectToApp, 300);
+
+      // If still on this page after 4 seconds (e.g. offline or connecting), show Retry button
       setTimeout(() => {
-        if (window.location.protocol === 'file:') {
-          // If loaded as local file scheme in Android APK
-          window.location.href = 'http://10.0.2.2:3000/login';
-        }
-      }, 500);
+        const btn = document.getElementById('retryBtn');
+        const status = document.getElementById('statusText');
+        if (btn) btn.style.display = 'inline-block';
+        if (status) status.innerText = 'Connecting to server took longer than expected. Tap below to connect to live online app:';
+      }, 4000);
     });
   </script>
 </head>
 <body>
   <div class="logo-badge">F</div>
   <h1>FieldTrack</h1>
-  <p>Connecting to Field Workforce Tracking Server...</p>
+  <p id="statusText">Connecting to Field Workforce Tracking Server...</p>
   <div class="spinner"></div>
+  <button id="retryBtn" class="btn-retry" onclick="redirectToApp()">🚀 Open Live FieldTrack App</button>
 </body>
 </html>
