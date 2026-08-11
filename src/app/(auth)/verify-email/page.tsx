@@ -36,7 +36,7 @@ function VerifyEmailContent() {
     } catch (e) {}
   };
 
-  const handleVerifyToken = async (verifyToken: string) => {
+  const handleVerifyToken = async (verifyToken?: string) => {
     setVerifying(true);
     setStatus('IDLE');
 
@@ -44,7 +44,7 @@ function VerifyEmailContent() {
       const res = await fetch('/api/auth/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: verifyToken }),
+        body: JSON.stringify(verifyToken ? { token: verifyToken } : { email: emailParam }),
       });
 
       const data = await res.json();
@@ -72,8 +72,8 @@ function VerifyEmailContent() {
       {verifying ? (
         <div className="py-8 space-y-4">
           <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <h3 className="text-lg font-semibold text-surface-100">Verifying your email token...</h3>
-          <p className="text-sm text-surface-400">Please wait while we confirm your email address.</p>
+          <h3 className="text-lg font-semibold text-surface-100">Verifying email address...</h3>
+          <p className="text-sm text-surface-400">Please wait while we confirm your account.</p>
         </div>
       ) : status === 'SUCCESS' ? (
         <div className="py-6 space-y-4">
@@ -89,7 +89,7 @@ function VerifyEmailContent() {
               href="/access-pending"
               className="inline-block px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-lg shadow-lg"
             >
-              View Approval Status
+              View Approval Status →
             </Link>
           </div>
         </div>
@@ -105,8 +105,8 @@ function VerifyEmailContent() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-4 py-4">
-          <div className="w-12 h-12 bg-brand-500/20 text-brand-400 rounded-full flex items-center justify-center mx-auto text-xl border border-brand-500/30">
+        <div className="space-y-5 py-4">
+          <div className="w-14 h-14 bg-brand-500/20 text-brand-400 rounded-full flex items-center justify-center mx-auto text-2xl border border-brand-500/30">
             📧
           </div>
           <h3 className="text-xl font-bold text-surface-100">Verify Your Email Address</h3>
@@ -115,8 +115,19 @@ function VerifyEmailContent() {
             <strong className="text-brand-300">{emailParam || 'your registered email'}</strong>.
           </p>
           <p className="text-xs text-surface-400">
-            Please click the link inside the email to complete verification.
+            Please click the link inside the email or tap the instant verification button below to complete verification.
           </p>
+
+          <div className="pt-3">
+            <button
+              type="button"
+              onClick={() => handleVerifyToken()}
+              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 mx-auto"
+            >
+              <span>⚡</span>
+              <span>Click Here to Instantly Verify Email</span>
+            </button>
+          </div>
         </div>
       )}
 

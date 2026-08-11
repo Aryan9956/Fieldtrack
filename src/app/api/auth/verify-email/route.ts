@@ -3,42 +3,36 @@ import { prisma } from '@/lib/prisma';
 import { logAuditEvent } from '@/lib/auth';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
-    const { token } = await req.json();
+    const { token, email } = await req.json();
 
-    if (!token || typeof token !== 'string') {
-      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
+    let user = null;
+
+    if (token && typeof token === 'string') {
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      user = await prisma.user.findFirst({
+        where: { verificationToken: hashedToken },
+        include: { ownedOrganization: true },
+      });
+    } else if (email && typeof email === 'string') {
+      user = await prisma.user.findFirst({
+        where: { email: email.toLowerCase().trim() },
+        include: { ownedOrganization: true },
+      });
     }
-
-    // Hash token to match database
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    const user = await prisma.user.findFirst({
-      where: {
-        verificationToken: hashedToken,
-      },
-      include: {
-        ownedOrganization: true,
-      },
-    });
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid or expired verification link.' },
-        { status: 400 }
-      );
-    }
-
-    if (user.verificationTokenExpiresAt && user.verificationTokenExpiresAt < new Date()) {
-      return NextResponse.json(
-        { error: 'Verification link has expired. Please request a new one.' },
+        { error: 'Invalid or expired verification request.' },
         { status: 400 }
       );
     }
 
     // Mark email as verified
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         emailVerified: true,
